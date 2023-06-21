@@ -10,7 +10,6 @@ This could potentially overwrite existing environment variables.**
     - [Fetching Outputs](#fetching-outputs)
     - [Inputs](#inputs)
 - [Examples](#examples)
-    - [Storing the SSM parameters as JSON](#storing-the-ssm-parameters-as-json)
     - [Example Workflow](#example-workflow)
 
 ## Usage
