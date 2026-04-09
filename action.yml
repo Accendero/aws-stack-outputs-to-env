@@ -23,7 +23,7 @@ inputs:
     description: "Cloudformation Stack Name"
     required: true
   prefix:
-    description: "Optional prefix for exported environment variable names. Must be uppercase letters only (e.g. MYPREFIX exports MYPREFIX_my_var)"
+    description: "Optional prefix for exported environment variable names. Must be uppercase letters and underscores only (e.g. MY_PREFIX exports MY_PREFIX_my_var)"
     required: false
   scope:
     description: "What to collect from the stack: 'Outputs' (default) or 'Parameters'"
@@ -37,8 +37,8 @@ runs:
       id: get_stack_outputs
       shell: bash
       run: |
-        if [ -n "$INPUT_PREFIX" ] && [[ ! "$INPUT_PREFIX" =~ ^[A-Z]+$ ]]; then
-          echo "Error: 'prefix' may only contain uppercase letters (A-Z)."
+        if [ -n "$INPUT_PREFIX" ] && [[ ! "$INPUT_PREFIX" =~ ^[A-Z_]+$ ]]; then
+          echo "Error: 'prefix' may only contain uppercase letters (A-Z) and underscores."
           exit 1
         fi
         if [[ "$INPUT_SCOPE" != "Outputs" && "$INPUT_SCOPE" != "Parameters" ]]; then
@@ -74,7 +74,8 @@ runs:
             if [[ -n "$INPUT_PREFIX" ]]; then
               line="${INPUT_PREFIX}_${line}"
             fi
-            mask=$(cut -d "=" -f2- <<< $line) && echo "::add-mask::${mask}" && echo $line >> $GITHUB_ENV && echo $line >> $GITHUB_OUTPUT
+            echo $line >> $GITHUB_OUTPUT
+            mask=$(cut -d "=" -f2- <<< $line) && [ -n "$mask" ] && echo "::add-mask::${mask}"; echo $line >> $GITHUB_ENV
           done
       env:
         INPUT_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
