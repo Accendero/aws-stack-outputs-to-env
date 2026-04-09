@@ -22,10 +22,9 @@ inputs:
   stack_name:
     description: "Cloudformation Stack Name"
     required: true
-  prefix_variables:
-    description: "Prefix exported environment variable names with the stack name (e.g. MyStack_my_var)"
+  prefix:
+    description: "Optional prefix for exported environment variable names. Must be uppercase letters only (e.g. MYPREFIX exports MYPREFIX_my_var)"
     required: false
-    default: "false"
 
 runs:
   using: "composite"
@@ -34,6 +33,10 @@ runs:
       id: get_stack_outputs
       shell: bash
       run: |
+        if [ -n "$INPUT_PREFIX" ] && [[ ! "$INPUT_PREFIX" =~ ^[A-Z]+$ ]]; then
+          echo "Error: 'prefix' may only contain uppercase letters (A-Z)."
+          exit 1
+        fi
         if [ -n "$INPUT_ACCESS_KEY_ID" ] && [ -z "$INPUT_SECRET_ACCESS_KEY" ]; then
           echo "Error: 'access_key_id' was provided but 'secret_access_key' is missing."
           exit 1
@@ -53,8 +56,8 @@ runs:
         aws cloudformation describe-stacks --stack-name "${{ inputs.stack_name }}" --query 'Stacks[0].Outputs' --output json \
         | jq -r '.[] | "\(.OutputKey)=\(.OutputValue)"' \
         | while read line ; do
-            if [[ "${{ inputs.prefix_variables }}" == "true" ]]; then
-              line="${{ inputs.stack_name }}_${line}"
+            if [[ -n "$INPUT_PREFIX" ]]; then
+              line="${INPUT_PREFIX}_${line}"
             fi
             mask=$(cut -d "=" -f2- <<< $line) && echo "::add-mask::${mask}" && echo $line >> $GITHUB_ENV
           done
@@ -62,4 +65,5 @@ runs:
         INPUT_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
         INPUT_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
         INPUT_SESSION_TOKEN: ${{ inputs.session_token }}
+        INPUT_PREFIX: ${{ inputs.prefix }}
         AWS_DEFAULT_REGION: ${{ inputs.region }}
