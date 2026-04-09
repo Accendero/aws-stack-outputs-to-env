@@ -45,7 +45,7 @@ jobs:
           echo "Validation correctly failed with only secret_access_key"
 
   # Integration test - requires AWS credentials and an existing CloudFormation stack
-  # Run with: act -j test-cfn-fetch -s AWS_ACCESS_KEY_ID=xxx -s AWS_SECRET_ACCESS_KEY=xxx -s AWS_REGION=xxx -s STACK_NAME=xxx
+  # Run with: act workflow_dispatch -j test-cfn-fetch --secret-file .secrets
   # This job only runs on workflow_dispatch (manual trigger)
   test-cfn-fetch:
     runs-on: ubuntu-latest
@@ -53,15 +53,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install AWS CLI
+        run: |
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          rm -rf aws awscliv2.zip
+
       - name: Fetch stack outputs with credentials
         uses: ./
         with:
           access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          session_token: ${{ secrets.AWS_SESSION_TOKEN }}
           region: ${{ secrets.AWS_REGION }}
           stack_name: ${{ secrets.STACK_NAME }}
+          prefix_variables: "true"
 
       - name: Verify environment variables were set
         run: |
-          echo "Stack outputs have been exported as environment variables"
-          env | grep -v "^_" | grep "=" | wc -l
+          PREFIX="${{ secrets.STACK_NAME }}_"
+          MATCHES=$(env | grep "^${PREFIX}" | wc -l)
+          if [[ "$MATCHES" -eq 0 ]]; then
+            echo "::error::No environment variables with prefix '${PREFIX}' were exported"
+            exit 1
+          fi
+          echo "Successfully exported ${MATCHES} variable(s) with prefix '${PREFIX}'"

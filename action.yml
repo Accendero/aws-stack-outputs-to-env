@@ -13,6 +13,9 @@ inputs:
   secret_access_key:
     description: "AWS Secret Access Key (optional if an active AWS session is already configured, e.g. via OIDC)"
     required: false
+  session_token:
+    description: "AWS Session Token (required when using temporary credentials, e.g. from STS or OIDC)"
+    required: false
   region:
     description: "AWS Region"
     required: true
@@ -43,9 +46,12 @@ runs:
           export AWS_ACCESS_KEY_ID="$INPUT_ACCESS_KEY_ID"
           export AWS_SECRET_ACCESS_KEY="$INPUT_SECRET_ACCESS_KEY"
         fi
+        if [ -n "$INPUT_SESSION_TOKEN" ]; then
+          export AWS_SESSION_TOKEN="$INPUT_SESSION_TOKEN"
+        fi
         echo "Collecting stack outputs from AWS Cloudformation"
         aws cloudformation describe-stacks --stack-name "${{ inputs.stack_name }}" --query 'Stacks[0].Outputs' --output json \
-        | jq -r 'keys[] as $k | "\($k)=\(.[$k].OutputValue)"') \
+        | jq -r '.[] | "\(.OutputKey)=\(.OutputValue)"' \
         | while read line ; do
             if [[ "${{ inputs.prefix_variables }}" == "true" ]]; then
               line="${{ inputs.stack_name }}_${line}"
@@ -55,4 +61,5 @@ runs:
       env:
         INPUT_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
         INPUT_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
+        INPUT_SESSION_TOKEN: ${{ inputs.session_token }}
         AWS_DEFAULT_REGION: ${{ inputs.region }}

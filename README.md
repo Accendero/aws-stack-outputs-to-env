@@ -58,6 +58,7 @@ use the existing AWS session credentials.
 
 * `access_key_id` - _(optional)_ AWS access key ID. Must be set together with `secret_access_key`. Omit both if an active AWS session is already configured (e.g. via OIDC).
 * `secret_access_key` - _(optional)_ AWS secret access key. Must be set together with `access_key_id`. Omit both if an active AWS session is already configured (e.g. via OIDC).
+* `session_token` - _(optional)_ AWS session token. Required when using temporary credentials from STS or OIDC.
 * `region` - AWS region
 * `stack_name` - Name of the stack to fetch outputs from
 * `prefix_variables` - _(optional, default: `false`)_ When `true`, prefixes each exported variable name with the stack name (e.g. `MyStack_my_var` instead of `my_var`). Useful when fetching outputs from multiple stacks in the same workflow.
@@ -180,12 +181,12 @@ To run the CloudFormation integration tests, you need AWS credentials and an exi
 
 3. Run the integration test:
    ```bash
-   ./bin/act -j test-cfn-fetch --secret-file .secrets
+   ./bin/act workflow_dispatch -j test-cfn-fetch --secret-file .secrets
    ```
 
 Alternatively, pass secrets directly:
 ```bash
-./bin/act -j test-cfn-fetch \
+./bin/act workflow_dispatch -j test-cfn-fetch \
   -s AWS_ACCESS_KEY_ID=xxx \
   -s AWS_SECRET_ACCESS_KEY=xxx \
   -s AWS_REGION=us-east-1 \
