@@ -84,3 +84,16 @@ runs:
         INPUT_PREFIX: ${{ inputs.prefix }}
         INPUT_SCOPE: ${{ inputs.scope }}
         AWS_DEFAULT_REGION: ${{ inputs.region }}
+
+    - name: Debug Environment Variables
+      if: ${{ runner.debug == '1' }}
+      shell: bash
+      run: env
+
+    - name: Debug Outputs
+      if: ${{ runner.debug == '1' }}
+      env:
+        OUTPUTS: ${{ toJSON(steps.get_stack_outputs.outputs) }}
+      shell: bash
+      run: |
+        echo "Step Outputs: $OUTPUTS"
