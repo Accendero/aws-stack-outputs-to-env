@@ -26,7 +26,7 @@ case-sensitive name of the stack you are querying in AWS CloudFormation.
 To authenticate with static credentials, provide them explicitly:
 
 ```yaml
-uses: accendero/aws-stack-outputs-to-env@v2
+uses: accendero/aws-stack-outputs-to-env@v2.1
 id: <step id 1>
 with:
   access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -47,7 +47,7 @@ use the existing AWS session credentials.
     role-to-assume: arn:aws:iam::123456789012:role/MyRole
     aws-region: us-west-2
 
-- uses: accendero/aws-stack-outputs-to-env@v2
+- uses: accendero/aws-stack-outputs-to-env@v2.1
   id: <step id 1>
   with:
     region: "us-west-2"
@@ -89,7 +89,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::123456789012:role/MyRole
           aws-region: us-west-2
-      - uses: accendero/aws-stack-outputs-to-env@v2
+      - uses: accendero/aws-stack-outputs-to-env@v2.1
         id: stack-outputs
         with:
           region: "us-west-2"
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: accendero/aws-stack-outputs-to-env@v2
+      - uses: accendero/aws-stack-outputs-to-env@v2.1
         id: stack-outputs
         with:
           access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
