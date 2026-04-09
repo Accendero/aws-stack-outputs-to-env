@@ -65,8 +65,7 @@ use the existing AWS session credentials.
 
 ### Outputs
 
-There are no outputs for this action. All the stack outputs will be exported
-as environment variables.
+Each stack output key is set as both an environment variable (via `$GITHUB_ENV`) and a step output (via `$GITHUB_OUTPUT`). Since the keys are determined at runtime by the stack, they cannot be declared statically — but they are accessible in subsequent steps as `${{ steps.<id>.outputs.MyOutputKey }}` or via the environment as `${{ env.MyOutputKey }}`.
 
 ## Examples
 
@@ -94,6 +93,9 @@ jobs:
         with:
           region: "us-west-2"
           stack_name: "MyStack"
+      # Access via step outputs
+      - run: echo "${{ steps.stack-outputs.outputs.StackOutputOne }}, ${{ steps.stack-outputs.outputs.StackOutputTwo }}"
+      # Or via environment variables
       - run: echo "${{ env.StackOutputOne }}, ${{ env.StackOutputTwo }}"
 ```
 
@@ -114,6 +116,9 @@ jobs:
           secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           region: ${{ secrets.AWS_DEFAULT_REGION }}
           stack_name: "MyStack"
+      # Access via step outputs
+      - run: echo "${{ steps.stack-outputs.outputs.StackOutputOne }}, ${{ steps.stack-outputs.outputs.StackOutputTwo }}"
+      # Or via environment variables
       - run: echo "${{ env.StackOutputOne }}, ${{ env.StackOutputTwo }}"
 ```
 
