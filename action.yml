@@ -25,6 +25,10 @@ inputs:
   prefix:
     description: "Optional prefix for exported environment variable names. Must be uppercase letters only (e.g. MYPREFIX exports MYPREFIX_my_var)"
     required: false
+  scope:
+    description: "What to collect from the stack: 'Outputs' (default) or 'Parameters'"
+    required: false
+    default: "Outputs"
 
 runs:
   using: "composite"
@@ -35,6 +39,10 @@ runs:
       run: |
         if [ -n "$INPUT_PREFIX" ] && [[ ! "$INPUT_PREFIX" =~ ^[A-Z]+$ ]]; then
           echo "Error: 'prefix' may only contain uppercase letters (A-Z)."
+          exit 1
+        fi
+        if [[ "$INPUT_SCOPE" != "Outputs" && "$INPUT_SCOPE" != "Parameters" ]]; then
+          echo "Error: 'scope' must be 'Outputs' or 'Parameters'."
           exit 1
         fi
         if [ -n "$INPUT_ACCESS_KEY_ID" ] && [ -z "$INPUT_SECRET_ACCESS_KEY" ]; then
@@ -52,9 +60,16 @@ runs:
         if [ -n "$INPUT_SESSION_TOKEN" ]; then
           export AWS_SESSION_TOKEN="$INPUT_SESSION_TOKEN"
         fi
-        echo "Collecting stack outputs from AWS Cloudformation"
-        aws cloudformation describe-stacks --stack-name "${{ inputs.stack_name }}" --query 'Stacks[0].Outputs' --output json \
-        | jq -r '.[] | "\(.OutputKey)=\(.OutputValue)"' \
+        if [[ "$INPUT_SCOPE" == "Parameters" ]]; then
+          QUERY='Stacks[0].Parameters'
+          JQ_EXPR='.[] | "\(.ParameterKey)=\(.ParameterValue)"'
+        else
+          QUERY='Stacks[0].Outputs'
+          JQ_EXPR='.[] | "\(.OutputKey)=\(.OutputValue)"'
+        fi
+        echo "Collecting stack ${INPUT_SCOPE} from AWS Cloudformation"
+        aws cloudformation describe-stacks --stack-name "${{ inputs.stack_name }}" --query "$QUERY" --output json \
+        | jq -r "$JQ_EXPR" \
         | while read line ; do
             if [[ -n "$INPUT_PREFIX" ]]; then
               line="${INPUT_PREFIX}_${line}"
@@ -66,4 +81,5 @@ runs:
         INPUT_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
         INPUT_SESSION_TOKEN: ${{ inputs.session_token }}
         INPUT_PREFIX: ${{ inputs.prefix }}
+        INPUT_SCOPE: ${{ inputs.scope }}
         AWS_DEFAULT_REGION: ${{ inputs.region }}
