@@ -1,2 +1,5 @@
 *.iml
 /.idea/
+
+# Secrets file for local testing with act
+.secrets
