@@ -19,8 +19,18 @@ case-sensitive name of the stack you are querying in AWS CloudFormation.
 
 ### Fetching Outputs
 
-The example below will fetch the stack outputs from a stack named `MyStack` on
-the `us-west-2` region and export the outputs as environment variables.
+If you already have an active AWS session (e.g. via OIDC or a prior credential
+step), `access_key_id` and `secret_access_key` can be omitted entirely:
+
+```yaml
+uses: accendero/aws-stack-outputs-to-env@v1
+id: <step id 1>
+with:
+  region: "us-west-2"
+  stack_name: "MyStack"
+```
+
+To authenticate with static credentials, provide them explicitly:
 
 ```yaml
 uses: accendero/aws-stack-outputs-to-env@v1
@@ -34,8 +44,8 @@ with:
 
 ### Inputs
 
-* `access_key_id` - AWS access key ID
-* `secret_access_key` - AWS secret access key
+* `access_key_id` - _(optional)_ AWS access key ID. Omit if an active AWS session is already configured (e.g. via OIDC).
+* `secret_access_key` - _(optional)_ AWS secret access key. Omit if an active AWS session is already configured (e.g. via OIDC).
 * `region` - AWS region
 * `stack_name` - Name of the stack to fetch outputs from
 
@@ -46,10 +56,34 @@ as environment variables.
 
 ## Examples
 
-### Example workflow
+### Example workflow (OIDC)
 
-The workflow below will fetch the stack outputs from `MyStack` and
-store the outputs as environment variables. 
+The workflow below authenticates via OIDC and fetches stack outputs from `MyStack`.
+
+```yaml
+name: Print Stack Outputs
+on: push
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/MyRole
+          aws-region: us-west-2
+      - uses: accendero/aws-stack-outputs-to-env@v1
+        id: stack-outputs
+        with:
+          region: "us-west-2"
+          stack_name: "MyStack"
+      - run: echo "${{ env.StackOutputOne }}, ${{ env.StackOutputTwo }}"
+```
+
+### Example workflow (static credentials)
 
 ```yaml
 name: Print Stack Outputs
@@ -58,7 +92,7 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - uses: accendero/aws-stack-outputs-to-env@v1
         id: stack-outputs
         with:
@@ -67,4 +101,4 @@ jobs:
           region: ${{ secrets.AWS_DEFAULT_REGION }}
           stack_name: "MyStack"
       - run: echo "${{ env.StackOutputOne }}, ${{ env.StackOutputTwo }}"
-```      
+```
