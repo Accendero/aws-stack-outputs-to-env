@@ -59,7 +59,7 @@ runs:
             if [[ -n "$INPUT_PREFIX" ]]; then
               line="${INPUT_PREFIX}_${line}"
             fi
-            mask=$(cut -d "=" -f2- <<< $line) && echo "::add-mask::${mask}" && echo $line >> $GITHUB_ENV
+            mask=$(cut -d "=" -f2- <<< $line) && echo "::add-mask::${mask}" && echo $line >> $GITHUB_ENV && echo $line >> $GITHUB_OUTPUT
           done
       env:
         INPUT_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
