@@ -44,8 +44,8 @@ with:
 
 ### Inputs
 
-* `access_key_id` - _(optional)_ AWS access key ID. Omit if an active AWS session is already configured (e.g. via OIDC).
-* `secret_access_key` - _(optional)_ AWS secret access key. Omit if an active AWS session is already configured (e.g. via OIDC).
+* `access_key_id` - _(optional)_ AWS access key ID. Must be set together with `secret_access_key`. Omit both if an active AWS session is already configured (e.g. via OIDC).
+* `secret_access_key` - _(optional)_ AWS secret access key. Must be set together with `access_key_id`. Omit both if an active AWS session is already configured (e.g. via OIDC).
 * `region` - AWS region
 * `stack_name` - Name of the stack to fetch outputs from
 
