@@ -60,6 +60,7 @@ use the existing AWS session credentials.
 * `secret_access_key` - _(optional)_ AWS secret access key. Must be set together with `access_key_id`. Omit both if an active AWS session is already configured (e.g. via OIDC).
 * `region` - AWS region
 * `stack_name` - Name of the stack to fetch outputs from
+* `prefix_variables` - _(optional, default: `false`)_ When `true`, prefixes each exported variable name with the stack name (e.g. `MyStack_my_var` instead of `my_var`). Useful when fetching outputs from multiple stacks in the same workflow.
 
 ### Outputs
 
