@@ -62,6 +62,7 @@ use the existing AWS session credentials.
 * `region` - AWS region
 * `stack_name` - Name of the stack to fetch outputs from
 * `prefix` - _(optional)_ When set, prefixes each exported variable name with the given string (e.g. `prefix: MYPREFIX` exports `MYPREFIX_my_var` instead of `my_var`). Must contain uppercase letters only (A-Z). Useful when fetching outputs from multiple stacks in the same workflow.
+* `scope` - _(optional)_ What to collect from the stack. Accepts `Outputs` (default) or `Parameters`.
 
 ### Outputs
 

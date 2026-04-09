@@ -61,6 +61,23 @@ jobs:
           fi
           echo "Validation correctly failed with invalid prefix"
 
+      - name: Test - should fail with invalid scope
+        id: invalid-scope
+        continue-on-error: true
+        uses: ./
+        with:
+          region: us-east-1
+          stack_name: "MyStack"
+          scope: "invalid-scope"
+
+      - name: Verify validation failed for invalid scope
+        run: |
+          if [[ "${{ steps.invalid-scope.outcome }}" == "success" ]]; then
+            echo "::error::Should have failed with invalid scope"
+            exit 1
+          fi
+          echo "Validation correctly failed with invalid scope"
+
   # Integration test - requires AWS credentials and an existing CloudFormation stack
   # Run with: act workflow_dispatch -j test-cfn-fetch --secret-file .secrets
   # This job only runs on workflow_dispatch (manual trigger)
@@ -107,3 +124,34 @@ jobs:
             exit 1
           fi
           echo "Successfully found ${MATCHES} output(s) with prefix 'TESTPREFIX_'"
+
+      - name: Fetch stack parameters with credentials
+        id: fetch-parameters
+        uses: ./
+        with:
+          access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          region: ${{ secrets.AWS_REGION }}
+          stack_name: ${{ secrets.STACK_NAME }}
+          prefix: "PARAMPREFIX"
+          scope: "Parameters"
+
+      - name: Verify parameter environment variables were set
+        run: |
+          MATCHES=$(env | grep -c "^PARAMPREFIX_")
+          if [[ "$MATCHES" -eq 0 ]]; then
+            echo "::error::No environment variables with prefix 'PARAMPREFIX_' were exported"
+            exit 1
+          fi
+          echo "Successfully exported ${MATCHES} parameter(s) with prefix 'PARAMPREFIX_'"
+
+      - name: Verify parameter step outputs were set
+        run: |
+          OUTPUTS='${{ toJSON(steps.fetch-parameters.outputs) }}'
+          MATCHES=$(echo "$OUTPUTS" | jq -r 'keys[]' | grep -c "^PARAMPREFIX_")
+          if [[ "$MATCHES" -eq 0 ]]; then
+            echo "::error::No step outputs with prefix 'PARAMPREFIX_' were found"
+            exit 1
+          fi
+          echo "Successfully found ${MATCHES} output(s) with prefix 'PARAMPREFIX_'"
