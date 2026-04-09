@@ -61,7 +61,7 @@ use the existing AWS session credentials.
 * `session_token` - _(optional)_ AWS session token. Required when using temporary credentials from STS or OIDC.
 * `region` - AWS region
 * `stack_name` - Name of the stack to fetch outputs from
-* `prefix_variables` - _(optional, default: `false`)_ When `true`, prefixes each exported variable name with the stack name (e.g. `MyStack_my_var` instead of `my_var`). Useful when fetching outputs from multiple stacks in the same workflow.
+* `prefix` - _(optional)_ When set, prefixes each exported variable name with the given string (e.g. `prefix: MYPREFIX` exports `MYPREFIX_my_var` instead of `my_var`). Must contain uppercase letters only (A-Z). Useful when fetching outputs from multiple stacks in the same workflow.
 
 ### Outputs
 

@@ -44,6 +44,23 @@ jobs:
           fi
           echo "Validation correctly failed with only secret_access_key"
 
+      - name: Test - should fail with invalid prefix
+        id: invalid-prefix
+        continue-on-error: true
+        uses: ./
+        with:
+          region: us-east-1
+          stack_name: "MyStack"
+          prefix: "invalid-prefix1"
+
+      - name: Verify validation failed for invalid prefix
+        run: |
+          if [[ "${{ steps.invalid-prefix.outcome }}" == "success" ]]; then
+            echo "::error::Should have failed with invalid prefix"
+            exit 1
+          fi
+          echo "Validation correctly failed with invalid prefix"
+
   # Integration test - requires AWS credentials and an existing CloudFormation stack
   # Run with: act workflow_dispatch -j test-cfn-fetch --secret-file .secrets
   # This job only runs on workflow_dispatch (manual trigger)
@@ -68,11 +85,11 @@ jobs:
           session_token: ${{ secrets.AWS_SESSION_TOKEN }}
           region: ${{ secrets.AWS_REGION }}
           stack_name: ${{ secrets.STACK_NAME }}
-          prefix_variables: "true"
+          prefix: "TESTPREFIX"
 
       - name: Verify environment variables were set
         run: |
-          PREFIX="${{ secrets.STACK_NAME }}_"
+          PREFIX="${{ secrets.prefix }}_"
           MATCHES=$(env | grep "^${PREFIX}" | wc -l)
           if [[ "$MATCHES" -eq 0 ]]; then
             echo "::error::No environment variables with prefix '${PREFIX}' were exported"
