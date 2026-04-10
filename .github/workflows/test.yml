@@ -78,6 +78,53 @@ jobs:
           fi
           echo "Validation correctly failed with invalid scope"
 
+  # Tests that outputs written by the action are accessible to the workflow that imports it.
+  # Uses a mock AWS CLI so no real credentials are needed.
+  # Run locally with: act pull_request -j test-imported-action-outputs
+  test-imported-action-outputs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mock AWS CLI
+        run: |
+          mkdir -p /tmp/mock-aws-bin
+          cat > /tmp/mock-aws-bin/aws << 'EOF'
+          #!/bin/bash
+          # Returns a fixed CloudFormation Outputs JSON array, ignoring all args
+          echo '[{"OutputKey":"Foo","OutputValue":"bar"},{"OutputKey":"Baz","OutputValue":"qux"}]'
+          EOF
+          chmod +x /tmp/mock-aws-bin/aws
+          echo "/tmp/mock-aws-bin" >> $GITHUB_PATH
+
+      - name: Call action as though imported
+        id: imported-action
+        uses: ./
+        with:
+          region: us-east-1
+          stack_name: MockStack
+
+      - name: Verify action.yml declares outputs for importing workflows
+        run: |
+          # Composite actions must declare outputs in action.yml for them to be
+          # accessible to importing workflows. act's runner incorrectly shares
+          # $GITHUB_OUTPUT across composite steps and callers, so behavioral
+          # assertions on steps.*.outputs.* pass locally even without declaration.
+          # This structural check catches the real requirement.
+          if ! grep -q "^outputs:" action.yml; then
+            echo "::error::action.yml has no outputs: section"
+            echo "Add an outputs: section to expose step outputs to importing workflows"
+            exit 1
+          fi
+          echo "action.yml declares outputs"
+
+      - name: Show all outputs visible to importing workflow
+        run: |
+          # NOTE: act incorrectly shares $GITHUB_OUTPUT with composite action steps,
+          # so these values appear populated even without declaration in action.yml.
+          # On real GitHub Actions runners this would be empty without an outputs: section.
+          echo "Step outputs: ${{ toJSON(steps.imported-action.outputs) }}"
+
   # Integration test - requires AWS credentials and an existing CloudFormation stack
   # Run with: act workflow_dispatch -j test-cfn-fetch --secret-file .secrets
   # This job only runs on workflow_dispatch (manual trigger)
