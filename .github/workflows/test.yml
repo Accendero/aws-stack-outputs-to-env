@@ -123,7 +123,7 @@ jobs:
           # NOTE: act incorrectly shares $GITHUB_OUTPUT with composite action steps,
           # so these values appear populated even without declaration in action.yml.
           # On real GitHub Actions runners this would be empty without an outputs: section.
-          echo "Step outputs: ${{ toJSON(steps.imported-action.outputs) }}"
+          echo "Step outputs: ${{ steps.imported-action.outputs.matrix }}"
 
   # Integration test - requires AWS credentials and an existing CloudFormation stack
   # Run with: act workflow_dispatch -j test-cfn-fetch --secret-file .secrets

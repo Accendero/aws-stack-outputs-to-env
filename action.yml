@@ -30,6 +30,11 @@ inputs:
     required: false
     default: "Outputs"
 
+outputs:
+  matrix:
+    description: "JSON object of all collected stack outputs/parameters, keyed by name (with prefix applied if set)"
+    value: ${{ steps.get_stack_outputs.outputs.matrix }}
+
 runs:
   using: "composite"
   steps:
@@ -63,18 +68,25 @@ runs:
         if [[ "$INPUT_SCOPE" == "Parameters" ]]; then
           QUERY='Stacks[0].Parameters'
           JQ_EXPR='.[] | "\(.ParameterKey)=\(.ParameterValue)"'
+          JSON_EXPR='[.[] | {key: .ParameterKey, value: .ParameterValue}] | from_entries'
         else
           QUERY='Stacks[0].Outputs'
           JQ_EXPR='.[] | "\(.OutputKey)=\(.OutputValue)"'
+          JSON_EXPR='[.[] | {key: .OutputKey, value: .OutputValue}] | from_entries'
         fi
         echo "Collecting stack ${INPUT_SCOPE} from AWS Cloudformation"
-        aws cloudformation describe-stacks --stack-name "${{ inputs.stack_name }}" --query "$QUERY" --output json \
-        | jq -r "$JQ_EXPR" \
+        STACK_DATA=$(aws cloudformation describe-stacks --stack-name "${{ inputs.stack_name }}" --query "$QUERY" --output json)
+        JSON=$(echo "$STACK_DATA" | jq -c "$JSON_EXPR")
+        if [[ -n "$INPUT_PREFIX" ]]; then
+          JSON=$(echo "$JSON" | jq -c --arg p "$INPUT_PREFIX" 'with_entries(.key = $p + "_" + .key)')
+        fi
+        echo "::add-mask::${JSON}"
+        echo "matrix=${JSON}" >> $GITHUB_OUTPUT
+        echo "$STACK_DATA" | jq -r "$JQ_EXPR" \
         | while read line ; do
             if [[ -n "$INPUT_PREFIX" ]]; then
               line="${INPUT_PREFIX}_${line}"
             fi
-            echo $line >> $GITHUB_OUTPUT
             mask=$(cut -d "=" -f2- <<< $line) && [ -n "$mask" ] && echo "::add-mask::${mask}"; echo $line >> $GITHUB_ENV
           done
       env:
@@ -88,7 +100,9 @@ runs:
     - name: Debug Environment Variables
       if: ${{ runner.debug == '1' }}
       shell: bash
-      run: env
+      run: |
+        echo "🐛 Debug Environment Variables:\n"
+        env
 
     - name: Debug Outputs
       if: ${{ runner.debug == '1' }}
@@ -96,4 +110,5 @@ runs:
         OUTPUTS: ${{ toJSON(steps.get_stack_outputs.outputs) }}
       shell: bash
       run: |
-        echo "Step Outputs: $OUTPUTS"
+        echo "🐛 Debug Step Outputs:\n"
+        echo "$OUTPUTS"
