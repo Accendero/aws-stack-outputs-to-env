@@ -10,9 +10,11 @@ This could potentially overwrite existing environment variables.**
     - [Fetching Outputs](#fetching-outputs)
     - [Fetching Outputs with OIDC](#fetching-outputs-with-oidc)
     - [Inputs](#inputs)
+    - [Outputs](#outputs)
 - [Examples](#examples)
     - [Example Workflow (OIDC)](#example-workflow-oidc)
     - [Example Workflow (static credentials)](#example-workflow-static-credentials)
+    - [Passing stack outputs to a downstream job](#passing-stack-outputs-to-a-downstream-job)
 - [Development](#development)
     - [Running Tests Locally](#running-tests-locally)
 
@@ -66,7 +68,21 @@ use the existing AWS session credentials.
 
 ### Outputs
 
-Each stack output key is set as both an environment variable (via `$GITHUB_ENV`) and a step output (via `$GITHUB_OUTPUT`). Since the keys are determined at runtime by the stack, they cannot be declared statically — but they are accessible in subsequent steps as `${{ steps.<id>.outputs.MyOutputKey }}` or via the environment as `${{ env.MyOutputKey }}`.
+Each stack output key is exported as an environment variable (via `$GITHUB_ENV`), accessible in subsequent steps as `${{ env.MyOutputKey }}`.
+
+The action also exposes a single declared output, `matrix`, which is a JSON object containing all collected keys and their values (with prefix applied if set):
+
+```json
+{"ApiUrl": "https://example.com", "BucketName": "my-bucket"}
+```
+
+Values in `matrix` are masked in logs. Access individual values with `fromJSON`:
+
+```yaml
+- run: echo "${{ fromJSON(steps.stack-outputs.outputs.matrix).ApiUrl }}"
+```
+
+Because `matrix` is a declared output, it is accessible to workflows that import this action — unlike individual step outputs, which require the action to enumerate each key statically. To pass stack values to downstream jobs, see [example below](#passing-stack-outputs-to-a-downstream-job).
 
 ## Examples
 
@@ -121,6 +137,34 @@ jobs:
       - run: echo "${{ steps.stack-outputs.outputs.StackOutputOne }}, ${{ steps.stack-outputs.outputs.StackOutputTwo }}"
       # Or via environment variables
       - run: echo "${{ env.StackOutputOne }}, ${{ env.StackOutputTwo }}"
+```
+
+### Passing stack outputs to a downstream job
+
+Environment variables set via `$GITHUB_ENV` are only available within the same job. To use stack outputs in a later job, re-export the `matrix` output as a job output and read it with `fromJSON` in the downstream job:
+
+```yaml
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    outputs:
+      stack: ${{ steps.stack-outputs.outputs.matrix }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/MyRole
+          aws-region: us-east-1
+      - uses: accendero/aws-stack-outputs-to-env@v2.1.1
+        id: stack-outputs
+        with:
+          region: us-east-1
+          stack_name: MyStack
+
+  deploy:
+    needs: fetch
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploying to ${{ fromJSON(needs.fetch.outputs.stack).ApiUrl }}"
 ```
 
 ## Development
