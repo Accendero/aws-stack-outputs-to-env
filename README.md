@@ -28,7 +28,7 @@ case-sensitive name of the stack you are querying in AWS CloudFormation.
 To authenticate with static credentials, provide them explicitly:
 
 ```yaml
-uses: accendero/aws-stack-outputs-to-env@v2.2
+uses: accendero/aws-stack-outputs-to-env@v2.3
 id: <step id 1>
 with:
   access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -49,7 +49,7 @@ use the existing AWS session credentials.
     role-to-assume: arn:aws:iam::123456789012:role/MyRole
     aws-region: us-west-2
 
-- uses: accendero/aws-stack-outputs-to-env@v2.2
+- uses: accendero/aws-stack-outputs-to-env@v2.3
   id: <step id 1>
   with:
     region: "us-west-2"
@@ -64,7 +64,7 @@ use the existing AWS session credentials.
 * `region` - AWS region
 * `stack_name` - Name of the stack to fetch outputs from
 * `prefix` - _(optional)_ When set, prefixes each exported variable name with the given string (e.g. `prefix: MYPREFIX` exports `MYPREFIX_my_var` instead of `my_var`). Must contain uppercase letters only (A-Z). Useful when fetching outputs from multiple stacks in the same workflow.
-* `scope` - _(optional)_ What to collect from the stack. Accepts `Outputs` (default) or `Parameters`.
+* `scope` - _(optional)_ What to collect from the stack. Accepts `Outputs` (default), `Parameters`, or `Resources`. When `Resources` is used, each resource's `LogicalResourceId` is exported as the variable name with its `PhysicalResourceId` as the value.
 
 ### Outputs
 
@@ -105,7 +105,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::123456789012:role/MyRole
           aws-region: us-west-2
-      - uses: accendero/aws-stack-outputs-to-env@v2.2
+      - uses: accendero/aws-stack-outputs-to-env@v2.3
         id: stack-outputs
         with:
           region: "us-west-2"
@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: accendero/aws-stack-outputs-to-env@v2.2
+      - uses: accendero/aws-stack-outputs-to-env@v2.3
         id: stack-outputs
         with:
           access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -154,7 +154,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::123456789012:role/MyRole
           aws-region: us-east-1
-      - uses: accendero/aws-stack-outputs-to-env@v2.2
+      - uses: accendero/aws-stack-outputs-to-env@v2.3
         id: stack-outputs
         with:
           region: us-east-1

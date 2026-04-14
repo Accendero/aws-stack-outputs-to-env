@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.3] — 2026-04-14
+
+### Added
+- `Resources` as a valid `scope` value. When set, the action calls `describe-stack-resources` and exports each resource's `LogicalResourceId` as the variable name with its `PhysicalResourceId` as the value. The `matrix` output follows the same structure as `Outputs` and `Parameters`.
+- Test coverage for `Resources` scope: a mock-based job verifying env var and matrix output, and integration test steps in `test-cfn-fetch`.
+
 ## [v2.2] — 2026-04-10
 
 ### Added
