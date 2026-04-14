@@ -125,6 +125,56 @@ jobs:
           # On real GitHub Actions runners this would be empty without an outputs: section.
           echo "Step outputs: ${{ steps.imported-action.outputs.matrix }}"
 
+  # Tests that the Resources scope correctly maps LogicalResourceId -> PhysicalResourceId.
+  # Uses a mock AWS CLI so no real credentials are needed.
+  # Run locally with: act pull_request -j test-imported-action-outputs-resources
+  test-imported-action-outputs-resources:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mock AWS CLI (describe-stack-resources)
+        run: |
+          mkdir -p /tmp/mock-aws-bin
+          cat > /tmp/mock-aws-bin/aws << 'EOF'
+          #!/bin/bash
+          # Returns a fixed CloudFormation StackResources JSON array, ignoring all args
+          echo '[{"LogicalResourceId":"MyBucket","PhysicalResourceId":"my-stack-mybucket-abc123"},{"LogicalResourceId":"MyFunction","PhysicalResourceId":"my-stack-MyFunction-XYZ789"}]'
+          EOF
+          chmod +x /tmp/mock-aws-bin/aws
+          echo "/tmp/mock-aws-bin" >> $GITHUB_PATH
+
+      - name: Call action with scope=Resources
+        id: resources-action
+        uses: ./
+        with:
+          region: us-east-1
+          stack_name: MockStack
+          scope: Resources
+
+      - name: Verify env vars were exported with LogicalResourceId as name
+        run: |
+          if [[ -z "${MyBucket}" ]]; then
+            echo "::error::Expected env var MyBucket to be set"
+            exit 1
+          fi
+          if [[ "${MyBucket}" != "my-stack-mybucket-abc123" ]]; then
+            echo "::error::Expected MyBucket=my-stack-mybucket-abc123, got ${MyBucket}"
+            exit 1
+          fi
+          echo "MyBucket=${MyBucket}"
+          echo "MyFunction=${MyFunction}"
+
+      - name: Verify matrix output contains resource entries
+        run: |
+          MATRIX='${{ steps.resources-action.outputs.matrix }}'
+          BUCKET=$(echo "$MATRIX" | jq -r '.MyBucket')
+          if [[ "$BUCKET" != "my-stack-mybucket-abc123" ]]; then
+            echo "::error::Expected matrix.MyBucket=my-stack-mybucket-abc123, got ${BUCKET}"
+            exit 1
+          fi
+          echo "matrix output: $MATRIX"
+
   # Integration test - requires AWS credentials and an existing CloudFormation stack
   # Run with: act workflow_dispatch -j test-cfn-fetch --secret-file .secrets
   # This job only runs on workflow_dispatch (manual trigger)
@@ -202,3 +252,34 @@ jobs:
             exit 1
           fi
           echo "Successfully found ${MATCHES} output(s) with prefix 'PARAMPREFIX_'"
+
+      - name: Fetch stack resources with credentials
+        id: fetch-resources
+        uses: ./
+        with:
+          access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          region: ${{ secrets.AWS_REGION }}
+          stack_name: ${{ secrets.STACK_NAME }}
+          prefix: "RESOURCEPREFIX"
+          scope: "Resources"
+
+      - name: Verify resource environment variables were set
+        run: |
+          MATCHES=$(env | grep -c "^RESOURCEPREFIX_")
+          if [[ "$MATCHES" -eq 0 ]]; then
+            echo "::error::No environment variables with prefix 'RESOURCEPREFIX_' were exported"
+            exit 1
+          fi
+          echo "Successfully exported ${MATCHES} resource(s) with prefix 'RESOURCEPREFIX_'"
+
+      - name: Verify resource step outputs were set
+        run: |
+          OUTPUTS='${{ toJSON(steps.fetch-resources.outputs) }}'
+          MATCHES=$(echo "$OUTPUTS" | jq -r 'keys[]' | grep -c "^RESOURCEPREFIX_")
+          if [[ "$MATCHES" -eq 0 ]]; then
+            echo "::error::No step outputs with prefix 'RESOURCEPREFIX_' were found"
+            exit 1
+          fi
+          echo "Successfully found ${MATCHES} output(s) with prefix 'RESOURCEPREFIX_'"

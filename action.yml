@@ -26,7 +26,7 @@ inputs:
     description: "Optional prefix for exported environment variable names. Must be uppercase letters and underscores only (e.g. MY_PREFIX exports MY_PREFIX_my_var)"
     required: false
   scope:
-    description: "What to collect from the stack: 'Outputs' (default) or 'Parameters'"
+    description: "What to collect from the stack: 'Outputs' (default), 'Parameters', or 'Resources'"
     required: false
     default: "Outputs"
 
@@ -46,8 +46,8 @@ runs:
           echo "Error: 'prefix' may only contain uppercase letters (A-Z) and underscores."
           exit 1
         fi
-        if [[ "$INPUT_SCOPE" != "Outputs" && "$INPUT_SCOPE" != "Parameters" ]]; then
-          echo "Error: 'scope' must be 'Outputs' or 'Parameters'."
+        if [[ "$INPUT_SCOPE" != "Outputs" && "$INPUT_SCOPE" != "Parameters" && "$INPUT_SCOPE" != "Resources" ]]; then
+          echo "Error: 'scope' must be 'Outputs', 'Parameters', or 'Resources'."
           exit 1
         fi
         if [ -n "$INPUT_ACCESS_KEY_ID" ] && [ -z "$INPUT_SECRET_ACCESS_KEY" ]; then
@@ -66,16 +66,23 @@ runs:
           export AWS_SESSION_TOKEN="$INPUT_SESSION_TOKEN"
         fi
         if [[ "$INPUT_SCOPE" == "Parameters" ]]; then
+          AWS_SUBCOMMAND="describe-stacks"
           QUERY='Stacks[0].Parameters'
           JQ_EXPR='.[] | "\(.ParameterKey)=\(.ParameterValue)"'
           JSON_EXPR='[.[] | {key: .ParameterKey, value: .ParameterValue}] | from_entries'
+        elif [[ "$INPUT_SCOPE" == "Resources" ]]; then
+          AWS_SUBCOMMAND="describe-stack-resources"
+          QUERY='StackResources'
+          JQ_EXPR='.[] | "\(.LogicalResourceId)=\(.PhysicalResourceId)"'
+          JSON_EXPR='[.[] | {key: .LogicalResourceId, value: .PhysicalResourceId}] | from_entries'
         else
+          AWS_SUBCOMMAND="describe-stacks"
           QUERY='Stacks[0].Outputs'
           JQ_EXPR='.[] | "\(.OutputKey)=\(.OutputValue)"'
           JSON_EXPR='[.[] | {key: .OutputKey, value: .OutputValue}] | from_entries'
         fi
         echo "Collecting stack ${INPUT_SCOPE} from AWS Cloudformation"
-        STACK_DATA=$(aws cloudformation describe-stacks --stack-name "${{ inputs.stack_name }}" --query "$QUERY" --output json)
+        STACK_DATA=$(aws cloudformation $AWS_SUBCOMMAND --stack-name "${{ inputs.stack_name }}" --query "$QUERY" --output json)
         JSON=$(echo "$STACK_DATA" | jq -c "$JSON_EXPR")
         if [[ -n "$INPUT_PREFIX" ]]; then
           JSON=$(echo "$JSON" | jq -c --arg p "$INPUT_PREFIX" 'with_entries(.key = $p + "_" + .key)')
