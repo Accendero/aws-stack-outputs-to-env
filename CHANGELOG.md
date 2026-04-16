@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.4] — 2026-04-16
+
+### Added
+- `mask` input: controls whether output values are masked in logs. Defaults to `true` (existing behaviour). Set to `false` to disable masking — useful when output values are non-sensitive (e.g. resource names, public URLs) and visibility in logs is desirable.
+- Validation that rejects any value for `mask` other than `true` or `false`.
+- Test coverage for invalid `mask` value validation.
+
 ## [v2.3] — 2026-04-14
 
 ### Added

@@ -78,6 +78,23 @@ jobs:
           fi
           echo "Validation correctly failed with invalid scope"
 
+      - name: Test - should fail with invalid mask
+        id: invalid-mask
+        continue-on-error: true
+        uses: ./
+        with:
+          region: us-east-1
+          stack_name: "MyStack"
+          mask: "yes"
+
+      - name: Verify validation failed for invalid mask
+        run: |
+          if [[ "${{ steps.invalid-mask.outcome }}" == "success" ]]; then
+            echo "::error::Should have failed with invalid mask"
+            exit 1
+          fi
+          echo "Validation correctly failed with invalid mask"
+
   # Tests that outputs written by the action are accessible to the workflow that imports it.
   # Uses a mock AWS CLI so no real credentials are needed.
   # Run locally with: act pull_request -j test-imported-action-outputs
