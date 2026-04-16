@@ -29,6 +29,10 @@ inputs:
     description: "What to collect from the stack: 'Outputs' (default), 'Parameters', or 'Resources'"
     required: false
     default: "Outputs"
+  mask:
+    description: "Whether to mask output values in logs (default: true). Set to 'false' to disable masking."
+    required: false
+    default: "true"
 
 outputs:
   matrix:
@@ -48,6 +52,10 @@ runs:
         fi
         if [[ "$INPUT_SCOPE" != "Outputs" && "$INPUT_SCOPE" != "Parameters" && "$INPUT_SCOPE" != "Resources" ]]; then
           echo "Error: 'scope' must be 'Outputs', 'Parameters', or 'Resources'."
+          exit 1
+        fi
+        if [[ "$INPUT_MASK" != "true" && "$INPUT_MASK" != "false" ]]; then
+          echo "Error: 'mask' must be 'true' or 'false'."
           exit 1
         fi
         if [ -n "$INPUT_ACCESS_KEY_ID" ] && [ -z "$INPUT_SECRET_ACCESS_KEY" ]; then
@@ -87,14 +95,14 @@ runs:
         if [[ -n "$INPUT_PREFIX" ]]; then
           JSON=$(echo "$JSON" | jq -c --arg p "$INPUT_PREFIX" 'with_entries(.key = $p + "_" + .key)')
         fi
-        echo "::add-mask::${JSON}"
+        [[ "$INPUT_MASK" == "true" ]] && echo "::add-mask::${JSON}"
         echo "matrix=${JSON}" >> $GITHUB_OUTPUT
         echo "$STACK_DATA" | jq -r "$JQ_EXPR" \
         | while read line ; do
             if [[ -n "$INPUT_PREFIX" ]]; then
               line="${INPUT_PREFIX}_${line}"
             fi
-            mask=$(cut -d "=" -f2- <<< $line) && [ -n "$mask" ] && echo "::add-mask::${mask}"; echo $line >> $GITHUB_ENV
+            mask=$(cut -d "=" -f2- <<< $line) && [ -n "$mask" ] && [[ "$INPUT_MASK" == "true" ]] && echo "::add-mask::${mask}"; echo $line >> $GITHUB_ENV
           done
       env:
         INPUT_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
@@ -102,6 +110,7 @@ runs:
         INPUT_SESSION_TOKEN: ${{ inputs.session_token }}
         INPUT_PREFIX: ${{ inputs.prefix }}
         INPUT_SCOPE: ${{ inputs.scope }}
+        INPUT_MASK: ${{ inputs.mask }}
         AWS_DEFAULT_REGION: ${{ inputs.region }}
 
     - name: Debug Environment Variables
